@@ -11,16 +11,28 @@ class UnitConverterApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Unit Converter',
+      title: 'Precision Converter',
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.deepPurple,
-        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.cyan,
+          brightness: Brightness.light,
+        ),
+        textTheme: const TextTheme(
+          displaySmall: TextStyle(fontWeight: FontWeight.bold),
+          titleLarge: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.deepPurple,
-        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.cyan,
+          brightness: Brightness.dark,
+        ),
+        textTheme: const TextTheme(
+          displaySmall: TextStyle(fontWeight: FontWeight.bold),
+          titleLarge: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       themeMode: ThemeMode.system,
       home: const ConverterScreen(),
@@ -28,7 +40,15 @@ class UnitConverterApp extends StatelessWidget {
   }
 }
 
-enum ConversionType { length, temperature, volume, time }
+enum ConversionType {
+  length(Icons.straighten_rounded),
+  temperature(Icons.thermostat_rounded),
+  volume(Icons.opacity_rounded),
+  time(Icons.timer_rounded);
+
+  final IconData icon;
+  const ConversionType(this.icon);
+}
 
 class ConverterScreen extends StatefulWidget {
   const ConverterScreen({super.key});
@@ -38,337 +58,352 @@ class ConverterScreen extends StatefulWidget {
 }
 
 class _ConverterScreenState extends State<ConverterScreen> {
-  final lengthUnits = ["Meters", "Kilometers", "Feet", "Yards", "Miles"];
-  final temperatureUnits = ["Celsius", "Fahrenheit", "Kelvin"];
-  final volumeUnits = ["Milliliters", "Liters", "Cups", "Pints", "Gallons"];
-  final timeUnits = ["Seconds", "Minutes", "Hours", "Days"];
+  final Map<ConversionType, List<String>> _unitsMap = {
+    ConversionType.length: ['Meters', 'Kilometers', 'Feet', 'Yards', 'Miles'],
+    ConversionType.temperature: ['Celsius', 'Fahrenheit', 'Kelvin'],
+    ConversionType.volume: [
+      'Milliliters',
+      'Liters',
+      'Cups',
+      'Pints',
+      'Gallons',
+    ],
+    ConversionType.time: ['Seconds', 'Minutes', 'Hours', 'Days'],
+  };
 
-  ConversionType conversionType = ConversionType.length;
-  String inputValue = "";
-  String? inputUnit;
-  String? outputUnit;
-
-  List<String> get units {
-    switch (conversionType) {
-      case ConversionType.length:
-        return lengthUnits;
-      case ConversionType.temperature:
-        return temperatureUnits;
-      case ConversionType.volume:
-        return volumeUnits;
-      case ConversionType.time:
-        return timeUnits;
-    }
-  }
+  ConversionType _type = ConversionType.length;
+  String _input = '';
+  String? _fromUnit;
+  String? _toUnit;
 
   @override
   void initState() {
     super.initState();
-    inputUnit = units.first;
-    outputUnit = units.last;
+    _resetUnits();
   }
 
-  void resetUnits() {
-    setState(() {
-      inputUnit = units.first;
-      outputUnit = units.last;
-      inputValue = "";
-    });
+  void _resetUnits() {
+    final units = _unitsMap[_type]!;
+    _fromUnit = units.first;
+    _toUnit = units.length > 1 ? units[1] : units.first;
+    _input = '';
   }
 
-  double convert(double value) {
-    switch (conversionType) {
+  double _convert(double value) {
+    switch (_type) {
       case ConversionType.length:
-        return convertLength(value);
+        return _convertLength(value);
       case ConversionType.temperature:
-        return convertTemperature(value);
+        return _convertTemperature(value);
       case ConversionType.volume:
-        return convertVolume(value);
+        return _convertVolume(value);
       case ConversionType.time:
-        return convertTime(value);
+        return _convertTime(value);
     }
   }
 
-  double convertLength(double value) {
-    double valueInMeters;
-    switch (inputUnit) {
-      case "Meters":
-        valueInMeters = value;
-        break;
-      case "Kilometers":
-        valueInMeters = value * 1000;
-        break;
-      case "Feet":
-        valueInMeters = value * 0.3048;
-        break;
-      case "Yards":
-        valueInMeters = value * 0.9144;
-        break;
-      case "Miles":
-        valueInMeters = value * 1609.34;
-        break;
-      default:
-        valueInMeters = value;
-    }
-
-    switch (outputUnit) {
-      case "Meters":
-        return valueInMeters;
-      case "Kilometers":
-        return valueInMeters / 1000;
-      case "Feet":
-        return valueInMeters / 0.3048;
-      case "Yards":
-        return valueInMeters / 0.9144;
-      case "Miles":
-        return valueInMeters / 1609.34;
-      default:
-        return valueInMeters;
-    }
+  double _convertLength(double value) {
+    final mMap = {
+      'Meters': 1.0,
+      'Kilometers': 1000.0,
+      'Feet': 0.3048,
+      'Yards': 0.9144,
+      'Miles': 1609.34,
+    };
+    final inMeters = value * (mMap[_fromUnit] ?? 1.0);
+    return inMeters / (mMap[_toUnit] ?? 1.0);
   }
 
-  double convertTemperature(double value) {
-    double valueInCelsius;
-    switch (inputUnit) {
-      case "Celsius":
-        valueInCelsius = value;
-        break;
-      case "Fahrenheit":
-        valueInCelsius = (value - 32) * 5 / 9;
-        break;
-      case "Kelvin":
-        valueInCelsius = value - 273.15;
-        break;
-      default:
-        valueInCelsius = value;
+  double _convertTemperature(double value) {
+    double celsius;
+    if (_fromUnit == 'Fahrenheit') {
+      celsius = (value - 32) * 5 / 9;
+    } else if (_fromUnit == 'Kelvin') {
+      celsius = value - 273.15;
+    } else {
+      celsius = value;
     }
 
-    switch (outputUnit) {
-      case "Celsius":
-        return valueInCelsius;
-      case "Fahrenheit":
-        return valueInCelsius * 9 / 5 + 32;
-      case "Kelvin":
-        return valueInCelsius + 273.15;
-      default:
-        return valueInCelsius;
+    if (_toUnit == 'Fahrenheit') {
+      return celsius * 9 / 5 + 32;
+    } else if (_toUnit == 'Kelvin') {
+      return celsius + 273.15;
     }
+    return celsius;
   }
 
-  double convertVolume(double value) {
-    double valueInML;
-    switch (inputUnit) {
-      case "Milliliters":
-        valueInML = value;
-        break;
-      case "Liters":
-        valueInML = value * 1000;
-        break;
-      case "Cups":
-        valueInML = value * 240;
-        break;
-      case "Pints":
-        valueInML = value * 473.176;
-        break;
-      case "Gallons":
-        valueInML = value * 3785.41;
-        break;
-      default:
-        valueInML = value;
-    }
-
-    switch (outputUnit) {
-      case "Milliliters":
-        return valueInML;
-      case "Liters":
-        return valueInML / 1000;
-      case "Cups":
-        return valueInML / 240;
-      case "Pints":
-        return valueInML / 473.176;
-      case "Gallons":
-        return valueInML / 3785.41;
-      default:
-        return valueInML;
-    }
+  double _convertVolume(double value) {
+    final mlMap = {
+      'Milliliters': 1.0,
+      'Liters': 1000.0,
+      'Cups': 240.0,
+      'Pints': 473.176,
+      'Gallons': 3785.41,
+    };
+    final inMl = value * (mlMap[_fromUnit] ?? 1.0);
+    return inMl / (mlMap[_toUnit] ?? 1.0);
   }
 
-  double convertTime(double value) {
-    double valueInSeconds;
-    switch (inputUnit) {
-      case "Seconds":
-        valueInSeconds = value;
-        break;
-      case "Minutes":
-        valueInSeconds = value * 60;
-        break;
-      case "Hours":
-        valueInSeconds = value * 3600;
-        break;
-      case "Days":
-        valueInSeconds = value * 86400;
-        break;
-      default:
-        valueInSeconds = value;
-    }
-
-    switch (outputUnit) {
-      case "Seconds":
-        return valueInSeconds;
-      case "Minutes":
-        return valueInSeconds / 60;
-      case "Hours":
-        return valueInSeconds / 3600;
-      case "Days":
-        return valueInSeconds / 86400;
-      default:
-        return valueInSeconds;
-    }
+  double _convertTime(double value) {
+    final sMap = {
+      'Seconds': 1.0,
+      'Minutes': 60.0,
+      'Hours': 3600.0,
+      'Days': 86400.0,
+    };
+    final inSeconds = value * (sMap[_fromUnit] ?? 1.0);
+    return inSeconds / (sMap[_toUnit] ?? 1.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final double result = convert(double.tryParse(inputValue) ?? 0);
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final result = _convert(double.tryParse(_input) ?? 0);
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Unit Converter', style: TextStyle(fontWeight: FontWeight.bold),),
+        title: const Text('Precision Converter'),
         centerTitle: true,
+        elevation: 2,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: Container(
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colorScheme.primary.withValues(alpha: 0.0),
+              colorScheme.surface.withValues(alpha: 0.2),
+            ],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildTypeSelector(colorScheme),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 32),
+                    _buildUnitSelectors(colorScheme),
+                    const SizedBox(height: 32),
+                    _buildConversionCard(colorScheme, theme, result),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeSelector(ColorScheme colorScheme) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: ConversionType.values.map((type) {
+          final isSelected = _type == type;
+          return Padding(
+            padding: EdgeInsets.only(right: 12, left: type.index == 0 ? 12 : 0),
+            child: ChoiceChip(
+              avatar: Icon(
+                type.icon,
+                size: 18,
+                color: isSelected ? colorScheme.onPrimary : colorScheme.primary,
+              ),
+              label: Text(type.name.capitalize()),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _type = type;
+                    _resetUnits();
+                  });
+                }
+              },
+              showCheckmark: false,
+              selectedColor: colorScheme.primary,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurface,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildConversionCard(
+    ColorScheme colorScheme,
+    ThemeData theme,
+    double result,
+  ) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(32),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      color: colorScheme.surfaceContainerLowest,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            // Conversion Type Chips
-            Card(
-              child: Padding(
+            TextField(
+              textAlign: TextAlign.center,
+              style: theme.textTheme.displaySmall?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+              decoration: InputDecoration(
+                hintText: '0.00',
+                hintStyle: TextStyle(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                ),
+                border: InputBorder.none,
+                suffixText: _fromUnit,
+                suffixStyle: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: (value) => setState(() => _input = value),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Container(
                 padding: const EdgeInsets.all(12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: ConversionType.values.map((type) {
-                    final isSelected = type == conversionType;
-                    return ChoiceChip(
-                      label: Text(
-                        type.name.capitalize(),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isSelected
-                              ? colorScheme.onPrimaryContainer
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            conversionType = type;
-                            resetUnits();
-                          });
-                        }
-                      },
-                      selectedColor: colorScheme.primaryContainer,
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                    );
-                  }).toList(),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_downward_rounded,
+                  color: colorScheme.primary,
                 ),
               ),
             ),
-
-            const SizedBox(height: 16),
-
-            // Input Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Enter value',
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 16),
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      onChanged: (value) =>
-                          setState(() => inputValue = value),
+            Column(
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    result.toStringAsFixed(result == result.toInt() ? 0 : 4),
+                    key: ValueKey(result),
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.primary,
                     ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: inputUnit,
-                      decoration: InputDecoration(
-                        labelText: 'From Unit',
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 16),
-                      ),
-                      items: units
-                          .map((unit) =>
-                          DropdownMenuItem(value: unit, child: Text(unit)))
-                          .toList(),
-                      onChanged: (value) => setState(() => inputUnit = value),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Output Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: outputUnit,
-                      decoration: InputDecoration(
-                        labelText: 'To Unit',
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 16),
-                      ),
-                      items: units
-                          .map((unit) =>
-                          DropdownMenuItem(value: unit, child: Text(unit)))
-                          .toList(),
-                      onChanged: (value) => setState(() => outputUnit = value),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      result.toStringAsFixed(4),
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  _toUnit ?? '',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildUnitSelectors(ColorScheme colorScheme) {
+    final units = _unitsMap[_type]!;
+    return Row(
+      children: [
+        Expanded(
+          child: _buildDropdown(
+            label: 'From',
+            value: _fromUnit,
+            items: units,
+            onChanged: (val) => setState(() => _fromUnit = val),
+            colorScheme: colorScheme,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildDropdown(
+            label: 'To',
+            value: _toUnit,
+            items: units,
+            onChanged: (val) => setState(() => _toUnit = val),
+            colorScheme: colorScheme,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    required ColorScheme colorScheme,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 12, bottom: 8),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 12,
+              letterSpacing: 1.1,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: colorScheme.primary,
+              ),
+              items: items
+                  .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                  .toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
