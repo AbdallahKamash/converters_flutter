@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const UnitConverterApp());
@@ -285,6 +286,15 @@ class _ConverterScreenState extends State<ConverterScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                TextInputFormatter.withFunction((oldValue, newValue) {
+                  final text = newValue.text;
+                  if (text.isEmpty) return newValue;
+                  if (text.split('.').length > 2) return oldValue;
+                  return newValue;
+                }),
+              ],
               onChanged: (value) => setState(() => _input = value),
             ),
             Padding(
@@ -304,9 +314,25 @@ class _ConverterScreenState extends State<ConverterScreen> {
             Column(
               children: [
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 200),
+                  reverseDuration: const Duration(milliseconds: 0),
+                  switchInCurve: Curves.easeOutBack,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
+                        return ScaleTransition(
+                          scale: animation,
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
+                        );
+                      },
                   child: Text(
-                    result.toStringAsFixed(result == result.toInt() ? 0 : 4),
+                    result
+                        .toStringAsFixed(10)
+                        .replaceFirst(RegExp(r'0+$'), '')
+                        .replaceFirst(RegExp(r'\.$'), ''),
                     key: ValueKey(result),
                     style: theme.textTheme.displayMedium?.copyWith(
                       fontWeight: FontWeight.bold,
